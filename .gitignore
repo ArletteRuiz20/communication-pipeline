@@ -1,0 +1,7 @@
+venv/
+.env
+__pycache__/
+*.pyc
+*.wav
+.DS_Store
+requirements.txtecho

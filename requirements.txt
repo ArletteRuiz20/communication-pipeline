@@ -1,0 +1,3 @@
+google-adk
+cartesia
+python-dotenv
