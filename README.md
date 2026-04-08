@@ -18,7 +18,7 @@ A multi-agent AI pipeline that:
 - [x] Summarization agent
 - [x] Audio generation agent
 - [x] Web UI
-- [ ] File input support
+- [x] File input support
 
 ## Setup
 1. Clone the repo

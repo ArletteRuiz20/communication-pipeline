@@ -33,9 +33,22 @@ def run_single_task(text, task, language):
         prompt = f"Analyze the tone of this message and explain it in {language}:\n\n{text}"
     return ask_gemini(prompt)
 
+def read_file(uploaded_file):
+    if uploaded_file.type == "text/plain":
+        return uploaded_file.read().decode("utf-8")
+    elif uploaded_file.type == "application/pdf":
+        import pypdf
+        reader = pypdf.PdfReader(uploaded_file)
+        return "\n".join([page.extract_text() for page in reader.pages])
+    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        import docx
+        doc = docx.Document(uploaded_file)
+        return "\n".join([para.text for para in doc.paragraphs])
+    return ""
+
 st.set_page_config(page_title="AI Communication Assistant", page_icon="🌍")
 st.title("🌍 Agentic AI Communication Assistant")
-st.write("Enter text below and choose a task.")
+st.write("Enter text below or upload a file and choose a task.")
 
 task = st.selectbox(
     "Select a task",
@@ -47,15 +60,23 @@ language = st.selectbox(
     ["Spanish", "French", "Arabic", "Chinese", "Japanese", "English"]
 )
 
+uploaded_file = st.file_uploader(
+    "Upload a file (optional)",
+    type=["txt", "pdf", "docx"]
+)
+
 user_input = st.text_area(
-    "Enter your text",
+    "Or type your text here",
     height=200,
     placeholder="Paste a message, email, or document text..."
 )
 
 if st.button("Submit"):
+    if uploaded_file is not None:
+        user_input = read_file(uploaded_file)
+
     if user_input.strip() == "":
-        st.warning("Please enter some text.")
+        st.warning("Please enter some text or upload a file.")
     elif task == "Full Pipeline (Translate + Audio)":
         with st.spinner("Translating and generating audio..."):
             translated, audio_result = run_full_pipeline(user_input, language)
