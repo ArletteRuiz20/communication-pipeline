@@ -17,8 +17,7 @@ A multi-agent AI pipeline that:
 - [x] Translation agent
 - [x] Summarization agent
 - [x] Audio generation agent
-- [ ] Web UI
-- [ ] Support for more voices
+- [x] Web UI
 - [ ] File input support
 
 ## Setup
