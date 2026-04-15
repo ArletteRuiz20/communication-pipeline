@@ -17,8 +17,12 @@ client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
 # OAuth credentials
 # ---------------------------------------------------------------------------
 
-with open("credentials.json") as f:
-    _creds = json.load(f)
+_creds_str = os.environ.get("CREDENTIALS_JSON")
+if _creds_str:
+    _creds = json.loads(_creds_str)
+else:
+    with open("credentials.json") as f:
+        _creds = json.load(f)
 
 _web          = _creds.get("web") or _creds.get("installed")
 CLIENT_ID     = _web["client_id"]
