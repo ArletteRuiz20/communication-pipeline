@@ -17,46 +17,23 @@ client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
 # OAuth credentials
 # ---------------------------------------------------------------------------
 
-_creds_str = os.environ.get("CREDENTIALS_JSON")
-if _creds_str:
-    _creds = json.loads(_creds_str)
-else:
-    with open("credentials.json") as f:
-        _creds = json.load(f)
+with open("credentials.json") as f:
+    _creds = json.load(f)
 
 _web          = _creds.get("web") or _creds.get("installed")
 CLIENT_ID     = _web["client_id"]
 CLIENT_SECRET = _web["client_secret"]
 AUTH_URI      = _web["auth_uri"]
 TOKEN_URI     = _web["token_uri"]
-REDIRECT_URI = (
-    "https://communication-assistant-arletteruiz.streamlit.app/component/streamlit_oauth.authorize_button/"
-    if os.environ.get("CREDENTIALS_JSON")  # this env var only exists on Streamlit Cloud
-    else "http://localhost:8501/component/streamlit_oauth.authorize_button/"
-)
+REDIRECT_URI  = "http://localhost:8501/component/streamlit_oauth.authorize_button/index.html"
 SCOPES        = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send"
 
 # ---------------------------------------------------------------------------
 # Gemini helpers
 # ---------------------------------------------------------------------------
 
-def ask_gemini(prompt, retries=5):
-    import time
-    last_error = None
-    for attempt in range(retries):
-        try:
-            return client.models.generate_content(
-                model="gemini-2.5-flash", contents=prompt
-            ).text
-        except Exception as e:
-            last_error = e
-            if any(code in str(e) for code in ["503", "UNAVAILABLE", "overloaded", "ServerError"]):
-                if attempt < retries - 1:
-                    wait = (attempt + 1) * 4
-                    time.sleep(wait)
-                    continue
-            raise e
-    raise last_error
+def ask_gemini(prompt):
+    return client.models.generate_content(model="gemini-2.5-flash", contents=prompt).text
 
 
 def process_prompt(user_prompt, text_content=""):
@@ -113,7 +90,7 @@ def read_uploaded_bytes(file_bytes, file_name, file_type):
 def show_result(result, wants_audio, lang_code):
     """Helper to display result text and optional audio."""
     st.markdown("**Result**")
-    st.text_area("", value=result, height=180, disabled=True, label_visibility="collapsed", key=f"res_{hash(result)}")
+    st.text_area("", value=result, height=380, disabled=True, label_visibility="collapsed", key=f"res_{hash(result)}")
     if wants_audio:
         with st.spinner("Generating audio…"):
             try:
@@ -378,7 +355,7 @@ with tab_assistant:
 
         st.markdown("---")
         st.markdown("**Result**")
-        st.text_area("result_out", value=result, height=200,
+        st.text_area("result_out", value=result, height=380,
                      disabled=True, label_visibility="collapsed")
 
         if wants_audio:
@@ -498,66 +475,41 @@ with tab_gmail:
             email_text = f"Subject: {email_data['subject']}\nFrom: {email_data['from']}\n\n{email_data['body']}"
 
             st.markdown("---")
-            st.markdown("#### Actions")
+            st.markdown("#### What do you want to do with this email?")
+            st.caption('Type any instruction — e.g. "Summarize this", "Translate to French", "Draft a reply in Spanish", "Explain the tone and generate audio"')
 
-            ac1, ac2, ac3 = st.columns(3)
-
-            with ac1:
-                if st.button("📝 Summarize", key="g_sum", use_container_width=True):
-                    with st.spinner("Summarizing…"):
-                        res, wa, lc = process_prompt("Summarize this email clearly", email_text)
-                    st.markdown("**Summary**")
-                    st.text_area("sum_out", value=res, height=160,
-                                 disabled=True, label_visibility="collapsed")
-                    if wa:
-                        with st.spinner("Generating audio…"):
-                            try:
-                                cartesia_text_to_speech(res, lc)
-                                if os.path.exists("cartesia_output.wav"):
-                                    st.audio("cartesia_output.wav", format="audio/wav")
-                            except Exception as e:
-                                st.error(f"Audio failed: {e}")
-
-            with ac2:
-                if st.button("🌐 Translate", key="g_tr", use_container_width=True):
-                    with st.spinner("Translating…"):
-                        res, wa, lc = process_prompt("Translate this email to English", email_text)
-                    st.markdown("**Translation**")
-                    st.text_area("tr_out", value=res, height=160,
-                                 disabled=True, label_visibility="collapsed")
-                    if wa:
-                        with st.spinner("Generating audio…"):
-                            try:
-                                cartesia_text_to_speech(res, lc)
-                                if os.path.exists("cartesia_output.wav"):
-                                    st.audio("cartesia_output.wav", format="audio/wav")
-                            except Exception as e:
-                                st.error(f"Audio failed: {e}")
-
-            with ac3:
-                if st.button("✍️ Draft reply", key="g_dr", use_container_width=True):
-                    with st.spinner("Drafting…"):
-                        draft = ask_gemini(
-                            f"Draft a professional reply to this email:\n\n{email_text}"
-                        )
-                    st.session_state.draft_reply = draft
-                    st.rerun()
-
-            # Custom prompt
-            st.markdown("")
-            custom = st.text_input(
-                "Custom instruction for this email",
-                placeholder='e.g. "Translate to French and generate audio"',
-                key="g_custom_inp",
+            email_prompt = st.text_input(
+                "Your instruction",
+                placeholder='e.g. "Translate to Spanish and generate audio"',
+                key="g_prompt",
+                label_visibility="collapsed",
             )
-            cc1, cc2, cc3 = st.columns([1,1,1])
-            with cc2:
-                if st.button("Run →", key="g_run", use_container_width=True):
-                    if custom.strip():
+
+            col_run1, col_run2, col_run3 = st.columns([1, 1, 1])
+            with col_run2:
+                run_email = st.button("Run →", key="g_run", use_container_width=True)
+
+            if run_email:
+                if not email_prompt.strip():
+                    st.warning("Please type an instruction above.")
+                else:
+                    # Detect if user wants a draft reply — handle separately so it
+                    # populates the send form rather than just showing a text area
+                    lower_p = email_prompt.lower()
+                    is_draft = any(w in lower_p for w in ["draft", "reply", "respond", "write back", "answer"])
+
+                    if is_draft:
+                        with st.spinner("Drafting reply…"):
+                            draft = ask_gemini(
+                                f"{email_prompt}\n\nOriginal email:\n{email_text}"
+                            )
+                        st.session_state.draft_reply = draft
+                        st.rerun()
+                    else:
                         with st.spinner("Processing…"):
-                            res, wa, lc = process_prompt(custom, email_text)
+                            res, wa, lc = process_prompt(email_prompt, email_text)
                         st.markdown("**Result**")
-                        st.text_area("cust_out", value=res, height=160,
+                        st.text_area("email_res_out", value=res, height=380,
                                      disabled=True, label_visibility="collapsed")
                         if wa:
                             with st.spinner("Generating audio…"):
@@ -565,6 +517,7 @@ with tab_gmail:
                                     cartesia_text_to_speech(res, lc)
                                     if os.path.exists("cartesia_output.wav"):
                                         st.audio("cartesia_output.wav", format="audio/wav")
+                                        st.success("Audio ready!")
                                 except Exception as e:
                                     st.error(f"Audio failed: {e}")
 
