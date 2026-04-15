@@ -5,3 +5,5 @@ __pycache__/
 *.wav
 .DS_Store
 requirements.txtecho
+credentials.json
+token.json

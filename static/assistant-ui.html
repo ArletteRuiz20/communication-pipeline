@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Communication Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Serif+Text:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --c1:#B4B534;--c2:#E36888;--c3:#F2D88F;--c4:#6698CC;
+  --bg:#faf9f4;--surface:#fff;--surface2:#f5f3ea;
+  --border:rgba(180,181,52,0.18);--border2:rgba(180,181,52,0.32);
+  --text:#1e1d14;--muted:#6b6a52;--hint:#b0ae90;--r:14px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:56px 20px 80px;gap:36px}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(180,181,52,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(180,181,52,0.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;width:100%;max-width:700px;display:flex;flex-direction:column;align-items:center;gap:36px}
+
+/* header */
+.top{text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.logo{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;border:1.5px solid var(--c1);background:var(--surface);margin-bottom:2px}
+.logo svg{width:22px;height:22px;stroke:var(--c1)}
+h1{font-family:'DM Serif Display',Georgia,serif;font-size:clamp(26px,5vw,38px);font-weight:400;color:var(--text);letter-spacing:-.01em;line-height:1.1}
+h1 em{font-style:italic;color:var(--c2)}
+.sub{font-family:'DM Serif Text',Georgia,serif;font-size:15px;color:var(--muted);font-style:italic}
+.accent-bar{display:flex;gap:5px;margin-top:2px}
+.accent-bar span{height:3px;border-radius:2px}
+.ab1{width:32px;background:var(--c1)}.ab2{width:18px;background:var(--c2)}.ab3{width:24px;background:var(--c3)}.ab4{width:14px;background:var(--c4)}
+
+/* tabs */
+.tabs{display:flex;gap:4px;background:var(--surface2);border-radius:12px;padding:4px;width:100%}
+.tab{flex:1;padding:8px;border-radius:8px;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;color:var(--muted);cursor:pointer;transition:all .18s}
+.tab.active{background:var(--surface);color:var(--text);font-weight:500;border:1px solid var(--border2)}
+
+/* panel */
+.panel{display:none;width:100%;flex-direction:column;gap:12px}
+.panel.active{display:flex}
+
+/* prompt card */
+.main{width:100%;display:flex;flex-direction:column;gap:12px}
+.prompt-wrap{background:var(--surface);border:1.5px solid var(--border2);border-radius:var(--r);display:flex;flex-direction:column;transition:border-color .2s,box-shadow .2s;position:relative}
+.prompt-wrap:focus-within{border-color:var(--c1);box-shadow:0 0 0 3px rgba(180,181,52,0.12)}
+.prompt-wrap.drag-over{border-color:var(--c4);background:rgba(102,152,204,0.04)}
+.attach-rows{display:flex;flex-direction:column;gap:0}
+.file-row{display:none;align-items:center;gap:8px;padding:10px 14px 0;flex-wrap:wrap}
+.file-row.show{display:flex}
+.file-chip{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--muted);max-width:280px}
+.file-chip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.file-size{font-size:11px;color:var(--hint);flex-shrink:0}
+.file-type-badge{font-size:10px;padding:1px 6px;border-radius:100px;font-weight:500;flex-shrink:0}
+.badge-doc{background:rgba(102,152,204,0.12);color:#2a5a8a}
+.badge-ocr{background:rgba(227,104,136,0.12);color:#8a2a4a}
+.rm-btn{background:none;border:none;cursor:pointer;color:var(--hint);font-size:12px;padding:0;line-height:1;transition:color .15s;flex-shrink:0}
+.rm-btn:hover{color:var(--c2)}
+.drop-overlay{display:none;position:absolute;inset:0;border-radius:var(--r);align-items:center;justify-content:center;flex-direction:column;gap:6px;font-family:'DM Serif Text',Georgia,serif;font-style:italic;font-size:14px;color:var(--c4);pointer-events:none;background:rgba(102,152,204,0.05);border:1.5px dashed var(--c4)}
+.prompt-wrap.drag-over .drop-overlay{display:flex}
+.prompt-wrap.drag-over textarea,.prompt-wrap.drag-over .bar,.prompt-wrap.drag-over .attach-rows{opacity:.15;pointer-events:none}
+textarea{width:100%;background:transparent;border:none;outline:none;resize:none;color:var(--text);font-family:'DM Serif Text',Georgia,serif;font-size:15px;line-height:1.75;padding:18px 20px 8px;min-height:88px}
+textarea::placeholder{color:var(--hint);font-style:italic}
+.bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px 12px;gap:8px}
+.bar-left{display:flex;align-items:center;gap:4px}
+.icon-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--hint);cursor:pointer;transition:all .18s;position:relative}
+.icon-btn:hover{border-color:var(--c1);color:var(--c1)}
+.icon-btn.ocr-btn:hover{border-color:var(--c2);color:var(--c2)}
+.icon-btn svg{width:14px;height:14px;stroke:currentColor}
+.icon-btn .tooltip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--text);color:#fff;font-size:10px;padding:3px 8px;border-radius:5px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;font-family:'DM Sans',sans-serif}
+.icon-btn:hover .tooltip{opacity:1}
+#doc-input,#ocr-input{display:none}
+.send-btn{display:flex;align-items:center;gap:7px;padding:8px 20px;border-radius:10px;border:none;background:var(--c1);color:#1e1d14;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .18s,transform .12s;white-space:nowrap}
+.send-btn:hover{opacity:.88;transform:translateY(-1px)}
+.send-btn:active{transform:scale(.97)}
+.send-btn svg{width:12px;height:12px;stroke:currentColor}
+.hint-chips{display:flex;flex-wrap:wrap;gap:7px;width:100%}
+.hchip{padding:6px 14px;border-radius:100px;border:1px solid var(--border2);background:var(--surface);font-family:'DM Serif Text',Georgia,serif;font-style:italic;font-size:12px;color:var(--muted);cursor:pointer;transition:all .18s}
+.hchip:hover{border-color:var(--c2);color:var(--c2);background:rgba(227,104,136,0.04)}
+
+/* output shared */
+.output{width:100%;display:flex;flex-direction:column;gap:12px}
+.msg-user{display:flex;justify-content:flex-end}
+.bubble-user{background:var(--surface2);border:1px solid var(--border2);border-radius:16px 16px 4px 16px;padding:10px 16px;font-size:13px;max-width:85%;color:var(--muted);font-family:'DM Serif Text',Georgia,serif;font-style:italic;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bubble-file{display:inline-flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--hint);font-style:normal}
+.bubble-file.ocr{border-color:rgba(227,104,136,0.3);color:#8a2a4a}
+.result-card{background:var(--surface);border:1.5px solid var(--border2);border-radius:var(--r);overflow:hidden;animation:slideUp .32s ease both}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.result-section{padding:18px 20px;border-bottom:1px solid var(--border)}
+.result-section:last-child{border-bottom:none}
+.result-label{display:flex;align-items:center;gap:8px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;color:var(--hint);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-result{background:var(--c4)}.dot-ocr{background:var(--c2)}.dot-audio{background:var(--c1)}.dot-err{background:var(--c2)}.dot-gmail{background:#EA4335}
+.result-text{font-family:'DM Serif Text',Georgia,serif;font-size:15px;color:var(--text);line-height:1.75;white-space:pre-wrap}
+.ocr-text{font-family:'DM Serif Text',Georgia,serif;font-size:13px;color:var(--muted);line-height:1.7;white-space:pre-wrap;font-style:italic}
+.audio-wrap{display:flex;align-items:center;gap:14px}
+.play-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--c3);background:rgba(242,216,143,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;flex-shrink:0}
+.play-btn:hover{background:rgba(242,216,143,0.35)}
+.play-btn svg{width:12px;height:12px;fill:var(--c1);margin-left:1px}
+.audio-track{flex:1;display:flex;flex-direction:column;gap:6px}
+.track-bar{height:3px;border-radius:2px;cursor:pointer;overflow:hidden;background:rgba(180,181,52,0.18)}
+.track-fill{height:100%;background:var(--c1);border-radius:2px;width:0%;transition:width .08s linear}
+.track-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--hint)}
+.thinking{display:flex;align-items:center;gap:10px;padding:16px 20px;font-family:'DM Serif Text',Georgia,serif;font-style:italic;font-size:14px;color:var(--hint);animation:slideUp .2s ease both}
+.dots span{display:inline-block;width:5px;height:5px;border-radius:50%;margin:0 2px;animation:blink 1.2s ease-in-out infinite}
+.dots span:nth-child(1){background:var(--c1)}.dots span:nth-child(2){background:var(--c2);animation-delay:.2s}.dots span:nth-child(3){background:var(--c4);animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.15;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+code{font-family:monospace;font-size:12px;background:rgba(227,104,136,0.1);padding:2px 6px;border-radius:4px}
+
+/* ── Gmail panel ── */
+.gmail-connect{display:flex;flex-direction:column;align-items:center;gap:14px;padding:32px 20px;background:var(--surface);border:1.5px solid var(--border2);border-radius:var(--r);text-align:center}
+.gmail-connect p{font-size:13px;color:var(--muted);font-weight:300;line-height:1.7}
+.gmail-btn{display:flex;align-items:center;gap:8px;padding:10px 22px;border-radius:10px;border:1.5px solid var(--border2);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .18s;text-decoration:none}
+.gmail-btn:hover{border-color:#EA4335;color:#EA4335}
+.gmail-btn svg{width:16px;height:16px;flex-shrink:0}
+.gmail-status{display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(62,207,142,0.08);border:1px solid rgba(62,207,142,0.25);border-radius:8px;font-size:12px;color:#1a6645;width:100%}
+.gmail-status .dot-ok{width:7px;height:7px;border-radius:50%;background:#2d9f6e;flex-shrink:0}
+.gmail-status .disc-btn{margin-left:auto;background:none;border:none;font-size:11px;color:var(--hint);cursor:pointer;font-family:'DM Sans',sans-serif;transition:color .15s}
+.gmail-status .disc-btn:hover{color:var(--c2)}
+
+.email-list{display:flex;flex-direction:column;gap:6px;width:100%}
+.email-item{background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .18s}
+.email-item:hover{border-color:var(--c4);background:rgba(102,152,204,0.03)}
+.email-item.selected{border-color:var(--c4);background:rgba(102,152,204,0.06)}
+.email-from{font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.email-subject{font-size:13px;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.email-snippet{font-size:11px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.email-date{font-size:10px;color:var(--hint);float:right;margin-top:-18px}
+
+.email-actions{display:flex;gap:8px;flex-wrap:wrap;width:100%}
+.action-btn{flex:1;min-width:120px;padding:9px 14px;border-radius:10px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .18s;text-align:center}
+.action-btn:hover{border-color:var(--c1);color:var(--c1)}
+.action-btn.active{border-color:var(--c1);color:var(--c1);background:rgba(180,181,52,0.06)}
+
+.email-detail{background:var(--surface);border:1.5px solid var(--border2);border-radius:var(--r);overflow:hidden;width:100%}
+.email-detail-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
+.email-detail-subject{font-size:14px;font-weight:500;color:var(--text)}
+.email-detail-meta{font-size:11px;color:var(--hint)}
+.email-detail-body{padding:16px 18px;font-family:'DM Serif Text',Georgia,serif;font-size:14px;color:var(--muted);line-height:1.75;white-space:pre-wrap;max-height:220px;overflow-y:auto}
+
+.draft-area{width:100%;display:flex;flex-direction:column;gap:8px}
+.draft-input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-family:'DM Serif Text',Georgia,serif;font-size:13px;color:var(--text);resize:none;outline:none;line-height:1.6}
+.draft-input:focus{border-color:var(--c1)}
+.draft-row{display:flex;gap:8px}
+.draft-field{flex:1;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);outline:none}
+.draft-field:focus{border-color:var(--c1)}
+.send-email-btn{padding:8px 18px;border-radius:10px;border:none;background:var(--c4);color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.send-email-btn:hover{opacity:.85}
+
+.refresh-btn{display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;transition:all .15s;align-self:flex-end}
+.refresh-btn:hover{border-color:var(--c4);color:var(--c4)}
+.refresh-btn svg{width:12px;height:12px;stroke:currentColor}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top">
+    <div class="logo">
+      <svg viewBox="0 0 20 20" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="10" cy="10" r="7"/>
+        <path d="M3.5 7.5h13M3.5 12.5h13M10 3c-2 2-3 4.5-3 7s1 5 3 7M10 3c2 2 3 4.5 3 7s-1 5-3 7"/>
+      </svg>
+    </div>
+    <h1>Communication<br><em>Assistant</em></h1>
+    <div class="accent-bar">
+      <span class="ab1"></span><span class="ab2"></span>
+      <span class="ab3"></span><span class="ab4"></span>
+    </div>
+    <p class="sub">Translate, summarize, simplify — text or email.</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" style="width:100%;max-width:700px">
+    <button class="tab active" onclick="switchTab('prompt')">Assistant</button>
+    <button class="tab" onclick="switchTab('gmail')">Gmail</button>
+  </div>
+
+  <!-- ── ASSISTANT PANEL ── -->
+  <div class="panel active" id="panel-prompt" style="width:100%">
+    <div class="main">
+      <div class="prompt-wrap" id="promptWrap"
+        ondragover="onDragOver(event)"
+        ondragleave="onDragLeave(event)"
+        ondrop="onDrop(event)">
+        <div class="drop-overlay">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+            <path d="M10 4v10M6 8l4-4 4 4"/><path d="M3 15v1a2 2 0 002 2h10a2 2 0 002-2v-1"/>
+          </svg>
+          Drop to attach
+        </div>
+        <div class="attach-rows">
+          <div class="file-row" id="docRow"></div>
+          <div class="file-row" id="ocrRow"></div>
+        </div>
+        <textarea id="inp" rows="3"
+          placeholder='e.g. "Translate this to Spanish and give me audio" …'
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submit()}"></textarea>
+        <div class="bar">
+          <div class="bar-left">
+            <button class="icon-btn" onclick="document.getElementById('doc-input').click()">
+              <svg viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 10.5v2a2 2 0 01-2 2h-7a2 2 0 01-2-2v-2M8 2v8M5 5l3-3 3 3"/></svg>
+              <span class="tooltip">Attach document</span>
+            </button>
+            <input type="file" id="doc-input" accept=".pdf,.txt,.doc,.docx" onchange="onDocInput(this)">
+            <button class="icon-btn ocr-btn" onclick="document.getElementById('ocr-input').click()">
+              <svg viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="2"/><circle cx="8" cy="8" r="2.5"/><path d="M5 3V2M8 3V2M11 3V2"/></svg>
+              <span class="tooltip">Attach image / OCR</span>
+            </button>
+            <input type="file" id="ocr-input" accept=".png,.jpg,.jpeg,.webp,.pdf" onchange="onOcrInput(this)">
+            <button class="icon-btn" onclick="clearAll()">
+              <svg viewBox="0 0 14 14" fill="none" stroke-width="1.4" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg>
+              <span class="tooltip">Clear</span>
+            </button>
+          </div>
+          <button class="send-btn" onclick="submit()">
+            Send
+            <svg viewBox="0 0 12 12" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6h9M6 2l4 4-4 4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="hint-chips" id="hints">
+        <div class="hchip" onclick="fillHint(this)">Translate to French + audio</div>
+        <div class="hchip" onclick="fillHint(this)">Summarize in Spanish</div>
+        <div class="hchip" onclick="fillHint(this)">Simplify this text</div>
+        <div class="hchip" onclick="fillHint(this)">Explain the tone</div>
+        <div class="hchip" onclick="fillHint(this)">Translate to Japanese + audio</div>
+      </div>
+    </div>
+    <div class="output" id="output"></div>
+  </div>
+
+  <!-- ── GMAIL PANEL ── -->
+  <div class="panel" id="panel-gmail" style="width:100%">
+
+    <!-- Not connected -->
+    <div id="gmail-disconnected" class="gmail-connect">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <rect width="40" height="40" rx="10" fill="#fdf0f4"/>
+        <path d="M8 12h24l-12 10L8 12z" fill="#EA4335" opacity=".8"/>
+        <path d="M8 12v16h24V12" stroke="#EA4335" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <p>Connect your Gmail to read, translate, summarize, and draft replies to your emails.</p>
+      <a class="gmail-btn" href="/oauth/login">
+        <svg viewBox="0 0 16 16" fill="none" stroke="#EA4335" stroke-width="1.4" stroke-linecap="round"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M2 5l6 5 6-5"/></svg>
+        Connect Gmail
+      </a>
+    </div>
+
+    <!-- Connected -->
+    <div id="gmail-connected" style="display:none;flex-direction:column;gap:14px;width:100%">
+
+      <div class="gmail-status" id="gmailStatus">
+        <span class="dot-ok"></span>
+        <span id="gmailEmail">Connected</span>
+        <button class="disc-btn" onclick="disconnectGmail()">Disconnect</button>
+      </div>
+
+      <button class="refresh-btn" onclick="loadInbox()">
+        <svg viewBox="0 0 12 12" fill="none" stroke-width="1.4" stroke-linecap="round"><path d="M10 6a4 4 0 11-1-2.65"/><path d="M10 2v2.5H7.5"/></svg>
+        Refresh inbox
+      </button>
+
+      <!-- Email list -->
+      <div class="email-list" id="emailList">
+        <div style="font-size:13px;color:var(--hint);font-style:italic;text-align:center;padding:20px">Loading emails…</div>
+      </div>
+
+      <!-- Selected email detail -->
+      <div class="email-detail" id="emailDetail" style="display:none">
+        <div class="email-detail-header">
+          <div class="email-detail-subject" id="detailSubject"></div>
+          <div class="email-detail-meta" id="detailMeta"></div>
+        </div>
+        <div class="email-detail-body" id="detailBody"></div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="email-actions" id="emailActions" style="display:none">
+        <button class="action-btn" onclick="processEmail('summarize')">Summarize</button>
+        <button class="action-btn" onclick="processEmail('translate')">Translate</button>
+        <button class="action-btn" onclick="processEmail('draft_reply')">Draft reply</button>
+      </div>
+
+      <!-- Translate prompt input -->
+      <div id="translatePromptWrap" style="display:none">
+        <input class="draft-field" id="translatePrompt" placeholder='e.g. "Translate to French"' style="width:100%;margin-bottom:8px">
+        <button class="send-btn" style="width:100%;justify-content:center" onclick="runTranslate()">Run</button>
+      </div>
+
+      <!-- Draft area -->
+      <div class="draft-area" id="draftArea" style="display:none">
+        <div class="draft-row">
+          <input class="draft-field" id="draftTo" placeholder="To">
+          <input class="draft-field" id="draftSubject" placeholder="Subject">
+        </div>
+        <textarea class="draft-input" id="draftBody" rows="6" placeholder="Your reply will appear here. You can edit before sending."></textarea>
+        <div style="display:flex;gap:8px">
+          <button class="send-email-btn" onclick="sendEmail()">Send email</button>
+          <button class="action-btn" style="flex:0;padding:8px 14px" onclick="copyDraft()">Copy</button>
+        </div>
+      </div>
+
+      <!-- Gmail output -->
+      <div class="output" id="gmailOutput"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SERVER_URL = "";
+let docFile=null, ocrFile=null, currentAudio=null, audioPlaying=false;
+let selectedEmailId=null, selectedEmailData=null;
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', (i===0&&tab==='prompt')||(i===1&&tab==='gmail')));
+  document.getElementById('panel-prompt').classList.toggle('active', tab==='prompt');
+  document.getElementById('panel-gmail').classList.toggle('active', tab==='gmail');
+  if(tab==='gmail') checkGmailStatus();
+}
+
+// ── Gmail status ──────────────────────────────────────────────────────────────
+async function checkGmailStatus(){
+  try{
+    const res = await fetch(`${SERVER_URL}/gmail/status`);
+    const data = await res.json();
+    if(data.connected){
+      document.getElementById('gmail-disconnected').style.display='none';
+      document.getElementById('gmail-connected').style.display='flex';
+      document.getElementById('gmailEmail').textContent = data.email;
+      loadInbox();
+    } else {
+      document.getElementById('gmail-disconnected').style.display='flex';
+      document.getElementById('gmail-connected').style.display='none';
+    }
+  }catch(e){ console.error(e); }
+}
+
+async function disconnectGmail(){
+  await fetch(`${SERVER_URL}/gmail/disconnect`);
+  document.getElementById('gmail-disconnected').style.display='flex';
+  document.getElementById('gmail-connected').style.display='none';
+}
+
+// Check on load if we just came back from OAuth
+if(window.location.search.includes('gmail=connected')){
+  history.replaceState({}, '', '/');
+  switchTab('gmail');
+}
+
+// ── Inbox ─────────────────────────────────────────────────────────────────────
+async function loadInbox(){
+  const list = document.getElementById('emailList');
+  list.innerHTML = '<div style="font-size:13px;color:var(--hint);font-style:italic;text-align:center;padding:20px">Loading…</div>';
+  try{
+    const res = await fetch(`${SERVER_URL}/gmail/inbox?max=10`);
+    const data = await res.json();
+    if(data.error){ list.innerHTML='<div style="font-size:13px;color:var(--c2);padding:16px">Not connected.</div>'; return; }
+    if(!data.emails.length){ list.innerHTML='<div style="font-size:13px;color:var(--hint);padding:16px">No emails found.</div>'; return; }
+    list.innerHTML = data.emails.map(e=>`
+      <div class="email-item" onclick="selectEmail('${e.id}','${esc(e.subject)}','${esc(e.from)}','${esc(e.date)}','${esc(e.snippet)}')">
+        <div class="email-date">${formatDate(e.date)}</div>
+        <div class="email-from">${esc(e.from)}</div>
+        <div class="email-subject">${esc(e.subject)}</div>
+        <div class="email-snippet">${esc(e.snippet)}</div>
+      </div>`).join('');
+  }catch(e){ list.innerHTML='<div style="font-size:13px;color:var(--c2);padding:16px">Failed to load inbox.</div>'; }
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function formatDate(d){ try{ return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }catch(e){ return ''; } }
+
+async function selectEmail(id, subject, from, date, snippet){
+  selectedEmailId = id;
+  document.querySelectorAll('.email-item').forEach(el=>el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+
+  document.getElementById('detailSubject').textContent = subject;
+  document.getElementById('detailMeta').textContent = `From: ${from}  ·  ${date}`;
+  document.getElementById('detailBody').textContent = 'Loading…';
+  document.getElementById('emailDetail').style.display='block';
+  document.getElementById('emailActions').style.display='flex';
+  document.getElementById('draftArea').style.display='none';
+  document.getElementById('translatePromptWrap').style.display='none';
+  document.getElementById('gmailOutput').innerHTML='';
+
+  try{
+    const res = await fetch(`${SERVER_URL}/gmail/email/${id}`);
+    const data = await res.json();
+    selectedEmailData = data;
+    document.getElementById('detailBody').textContent = data.body || '(no body)';
+    document.getElementById('draftTo').value = data.from || '';
+    document.getElementById('draftSubject').value = 'Re: ' + (data.subject||'');
+  }catch(e){ document.getElementById('detailBody').textContent='Failed to load email.'; }
+}
+
+// ── Email actions ─────────────────────────────────────────────────────────────
+async function processEmail(action){
+  if(!selectedEmailId) return;
+  document.querySelectorAll('.action-btn').forEach(b=>b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  if(action==='translate'){
+    document.getElementById('translatePromptWrap').style.display='block';
+    document.getElementById('draftArea').style.display='none';
+    return;
+  }
+  if(action==='draft_reply'){
+    await runEmailAction('draft_reply', '');
+    document.getElementById('draftArea').style.display='flex';
+    return;
+  }
+  document.getElementById('translatePromptWrap').style.display='none';
+  await runEmailAction(action, '');
+}
+
+function runTranslate(){
+  const p = document.getElementById('translatePrompt').value.trim() || 'Translate this email to English';
+  runEmailAction('translate', p);
+}
+
+async function runEmailAction(action, prompt){
+  const out = document.getElementById('gmailOutput');
+  const loading = document.createElement('div');
+  loading.className='thinking';
+  loading.innerHTML=`<div class="dots"><span></span><span></span><span></span></div><span>Working on it…</span>`;
+  out.innerHTML=''; out.appendChild(loading);
+
+  const fd = new FormData();
+  fd.append('email_id', selectedEmailId);
+  fd.append('action', action);
+  fd.append('prompt', prompt);
+
+  try{
+    const res = await fetch(`${SERVER_URL}/gmail/process`, {method:'POST', body:fd});
+    const data = await res.json();
+    out.removeChild(loading);
+
+    const card = document.createElement('div');
+    card.className='result-card';
+
+    if(data.result){
+      const sec = document.createElement('div');
+      sec.className='result-section';
+      sec.innerHTML=`<div class="result-label"><span class="dot dot-gmail"></span>${action==='draft_reply'?'Draft reply':action}</div>
+        <div class="result-text">${data.result}</div>`;
+      card.appendChild(sec);
+
+      if(action==='draft_reply'){
+        document.getElementById('draftBody').value = data.result;
+        document.getElementById('draftArea').style.display='flex';
+      }
+    }
+    if(data.audio_url){
+      const sec = document.createElement('div');
+      sec.className='result-section';
+      const uid='a'+Math.random().toString(36).slice(2,8);
+      sec.innerHTML=`<div class="result-label"><span class="dot dot-audio"></span>Audio</div>
+        <div class="audio-wrap">
+          <button class="play-btn" id="btn_${uid}" onclick="togglePlay('${uid}','${SERVER_URL}${data.audio_url}')">
+            <svg viewBox="0 0 12 12"><path d="M2.5 2l8 4-8 4V2z"/></svg>
+          </button>
+          <div class="audio-track">
+            <div class="track-bar" onclick="seekAudio(event,this,'${uid}')"><div class="track-fill" id="fill_${uid}"></div></div>
+            <div class="track-meta"><span id="time_${uid}">0:00</span><span id="dur_${uid}">0:00</span></div>
+          </div>
+        </div>`;
+      card.appendChild(sec);
+    }
+    out.appendChild(card);
+  }catch(e){
+    out.innerHTML=`<div class="result-card"><div class="result-section"><div class="result-text" style="color:var(--c2)">Failed: ${e.message}</div></div></div>`;
+  }
+}
+
+async function sendEmail(){
+  const to = document.getElementById('draftTo').value.trim();
+  const subject = document.getElementById('draftSubject').value.trim();
+  const body = document.getElementById('draftBody').value.trim();
+  if(!to||!body){ alert('Please fill in To and body.'); return; }
+
+  const fd = new FormData();
+  fd.append('to', to); fd.append('subject', subject); fd.append('body', body);
+
+  try{
+    const res = await fetch(`${SERVER_URL}/gmail/send`, {method:'POST', body:fd});
+    const data = await res.json();
+    if(data.sent){
+      document.getElementById('draftArea').style.display='none';
+      const out = document.getElementById('gmailOutput');
+      const notice = document.createElement('div');
+      notice.className='result-card';
+      notice.innerHTML=`<div class="result-section"><div class="result-label"><span class="dot" style="background:#2d9f6e"></span>Sent</div><div class="result-text" style="color:#1a6645;font-size:13px">Email sent to ${to}</div></div>`;
+      out.prepend(notice);
+    }
+  }catch(e){ alert('Failed to send: '+e.message); }
+}
+
+function copyDraft(){
+  navigator.clipboard.writeText(document.getElementById('draftBody').value);
+}
+
+// ── Assistant panel ───────────────────────────────────────────────────────────
+function onDocInput(el){ if(el.files[0]){ docFile=el.files[0]; renderChip('docRow',docFile,'doc'); } }
+function onOcrInput(el){ if(el.files[0]){ ocrFile=el.files[0]; renderChip('ocrRow',ocrFile,'ocr'); } }
+function renderChip(rowId,file,type){
+  const row=document.getElementById(rowId); row.classList.add('show');
+  const kb=(file.size/1024).toFixed(1);
+  const label=type==='ocr'?'OCR':'DOC'; const cls=type==='ocr'?'badge-ocr':'badge-doc';
+  row.innerHTML=`<div class="file-chip"><span class="file-type-badge ${cls}">${label}</span><span class="file-chip-name">${file.name}</span><span class="file-size">${kb} KB</span><button class="rm-btn" onclick="removeFile('${type}')">✕</button></div>`;
+}
+function removeFile(type){
+  if(type==='doc'){docFile=null;const r=document.getElementById('docRow');r.innerHTML='';r.classList.remove('show');document.getElementById('doc-input').value='';}
+  if(type==='ocr'){ocrFile=null;const r=document.getElementById('ocrRow');r.innerHTML='';r.classList.remove('show');document.getElementById('ocr-input').value='';}
+}
+function onDragOver(e){e.preventDefault();document.getElementById('promptWrap').classList.add('drag-over')}
+function onDragLeave(e){if(!document.getElementById('promptWrap').contains(e.relatedTarget))document.getElementById('promptWrap').classList.remove('drag-over')}
+function onDrop(e){e.preventDefault();document.getElementById('promptWrap').classList.remove('drag-over');const f=e.dataTransfer.files[0];if(!f)return;if(f.type.startsWith('image/')){ocrFile=f;renderChip('ocrRow',f,'ocr');}else{docFile=f;renderChip('docRow',f,'doc');}}
+function fillHint(el){document.getElementById('inp').value=el.textContent;document.getElementById('inp').focus();document.getElementById('hints').style.display='none';}
+function clearAll(){document.getElementById('inp').value='';removeFile('doc');removeFile('ocr');document.getElementById('output').innerHTML='';document.getElementById('hints').style.display='flex';stopAudio();}
+
+async function submit(){
+  const prompt=document.getElementById('inp').value.trim();
+  if(!prompt&&!docFile&&!ocrFile)return;
+  document.getElementById('hints').style.display='none';
+  const out=document.getElementById('output');
+  const userDiv=document.createElement('div'); userDiv.className='msg-user';
+  let inner='';
+  if(docFile)inner+=`<span class="bubble-file">📎 ${docFile.name}</span>`;
+  if(ocrFile)inner+=`<span class="bubble-file ocr">📷 ${ocrFile.name}</span>`;
+  if(prompt)inner+=`<span>${prompt}</span>`;
+  userDiv.innerHTML=`<div class="bubble-user">${inner}</div>`;
+  out.appendChild(userDiv);
+  const savedDoc=docFile, savedOcr=ocrFile;
+  document.getElementById('inp').value=''; removeFile('doc'); removeFile('ocr');
+  const loading=document.createElement('div'); loading.className='thinking';
+  loading.innerHTML=`<div class="dots"><span></span><span></span><span></span></div><span>Working on it…</span>`;
+  out.appendChild(loading); loading.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const fd=new FormData(); fd.append('prompt',prompt);
+  if(savedDoc)fd.append('doc_file',savedDoc);
+  if(savedOcr)fd.append('ocr_file',savedOcr);
+  try{
+    const res=await fetch(`${SERVER_URL}/run`,{method:'POST',body:fd});
+    if(!res.ok)throw new Error(`Server error ${res.status}`);
+    const data=await res.json();
+    out.removeChild(loading); out.appendChild(buildCard(data));
+    out.lastElementChild.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(err){
+    out.removeChild(loading);
+    const card=document.createElement('div'); card.className='result-card';
+    card.innerHTML=`<div class="result-section"><div class="result-label"><span class="dot dot-err"></span>Connection error</div><div class="result-text" style="color:var(--c2);font-size:13px">${err.message}<br><br>Make sure the server is running:<br><code>uvicorn fastapi_server:app --reload --port 8000</code></div></div>`;
+    out.appendChild(card);
+  }
+}
+
+function buildCard(data){
+  const card=document.createElement('div'); card.className='result-card';
+  if(data.ocr_text){const sec=document.createElement('div');sec.className='result-section';sec.innerHTML=`<div class="result-label"><span class="dot dot-ocr"></span>OCR extracted text</div><div class="ocr-text">${data.ocr_text}</div>`;card.appendChild(sec);}
+  if(data.result){const sec=document.createElement('div');sec.className='result-section';sec.innerHTML=`<div class="result-label"><span class="dot dot-result"></span>Result</div><div class="result-text">${data.result}</div>`;card.appendChild(sec);}
+  if(data.audio_url){
+    const sec=document.createElement('div');sec.className='result-section';
+    const uid='a'+Math.random().toString(36).slice(2,8);
+    sec.innerHTML=`<div class="result-label"><span class="dot dot-audio"></span>Audio</div>
+      <div class="audio-wrap">
+        <button class="play-btn" id="btn_${uid}" onclick="togglePlay('${uid}','${SERVER_URL}${data.audio_url}')"><svg viewBox="0 0 12 12"><path d="M2.5 2l8 4-8 4V2z"/></svg></button>
+        <div class="audio-track"><div class="track-bar" onclick="seekAudio(event,this,'${uid}')"><div class="track-fill" id="fill_${uid}"></div></div>
+        <div class="track-meta"><span id="time_${uid}">0:00</span><span id="dur_${uid}">0:00</span></div></div>
+      </div>`;
+    card.appendChild(sec);
+  }
+  if(!data.result&&!data.ocr_text&&!data.audio_url){const sec=document.createElement('div');sec.className='result-section';sec.innerHTML=`<div class="result-text" style="color:var(--hint);font-style:italic">No output returned.</div>`;card.appendChild(sec);}
+  return card;
+}
+
+function stopAudio(){if(currentAudio){currentAudio.pause();currentAudio=null;}audioPlaying=false;}
+function fmtTime(s){return Math.floor(s/60)+':'+(Math.floor(s%60)+'').padStart(2,'0');}
+function togglePlay(uid,url){
+  const btn=document.getElementById('btn_'+uid),fill=document.getElementById('fill_'+uid),timeEl=document.getElementById('time_'+uid),durEl=document.getElementById('dur_'+uid);
+  const pauseSVG=`<svg viewBox="0 0 12 12" style="fill:var(--c1)"><rect x="2" y="1.5" width="3" height="9" rx="1"/><rect x="7" y="1.5" width="3" height="9" rx="1"/></svg>`;
+  const playSVG=`<svg viewBox="0 0 12 12" style="fill:var(--c1)"><path d="M2.5 2l8 4-8 4V2z"/></svg>`;
+  if(currentAudio&&currentAudio._uid!==uid)stopAudio();
+  if(!currentAudio||currentAudio._uid!==uid){
+    const audio=new Audio(url); audio._uid=uid; currentAudio=audio; audioPlaying=false;
+    audio.addEventListener('loadedmetadata',()=>{if(durEl)durEl.textContent=fmtTime(audio.duration);});
+    audio.addEventListener('timeupdate',()=>{if(!audio.duration)return;const pct=(audio.currentTime/audio.duration)*100;if(fill)fill.style.width=pct+'%';if(timeEl)timeEl.textContent=fmtTime(audio.currentTime);});
+    audio.addEventListener('ended',()=>{audioPlaying=false;if(btn)btn.innerHTML=playSVG;if(fill)fill.style.width='0%';if(timeEl)timeEl.textContent='0:00';currentAudio=null;});
+  }
+  if(audioPlaying&&currentAudio._uid===uid){currentAudio.pause();audioPlaying=false;btn.innerHTML=playSVG;}
+  else{currentAudio.play();audioPlaying=true;btn.innerHTML=pauseSVG;}
+}
+function seekAudio(e,bar,uid){if(!currentAudio||currentAudio._uid!==uid)return;currentAudio.currentTime=(e.offsetX/bar.offsetWidth)*currentAudio.duration;}
+</script>
+</body>
+</html>
