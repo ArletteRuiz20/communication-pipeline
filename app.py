@@ -36,8 +36,23 @@ SCOPES        = "https://www.googleapis.com/auth/gmail.readonly https://www.goog
 # Gemini helpers
 # ---------------------------------------------------------------------------
 
-def ask_gemini(prompt):
-    return client.models.generate_content(model="gemini-2.5-flash", contents=prompt).text
+def ask_gemini(prompt, retries=5):
+    import time
+    last_error = None
+    for attempt in range(retries):
+        try:
+            return client.models.generate_content(
+                model="gemini-2.5-flash", contents=prompt
+            ).text
+        except Exception as e:
+            last_error = e
+            if any(code in str(e) for code in ["503", "UNAVAILABLE", "overloaded", "ServerError"]):
+                if attempt < retries - 1:
+                    wait = (attempt + 1) * 4
+                    time.sleep(wait)
+                    continue
+            raise e
+    raise last_error
 
 
 def process_prompt(user_prompt, text_content=""):
