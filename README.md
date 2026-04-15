@@ -18,6 +18,12 @@ Users type a natural language instruction — the app figures out what to do:
 
 No dropdowns. No task selection. Just a prompt.
 
+# 🌍 AI Communication Assistant
+
+An agentic AI application that breaks down language barriers...
+
+**🔗 Live demo:** [communication-assistant-arletteruiz.streamlit.app](https://communication-assistant-arletteruiz.streamlit.app)
+
 ---
 
 ## Demo
