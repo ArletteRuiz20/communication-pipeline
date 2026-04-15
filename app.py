@@ -29,7 +29,7 @@ CLIENT_ID     = _web["client_id"]
 CLIENT_SECRET = _web["client_secret"]
 AUTH_URI      = _web["auth_uri"]
 TOKEN_URI     = _web["token_uri"]
-REDIRECT_URI = REDIRECT_URI = "https://communication-assistant-arletteruiz.streamlit.app/component/streamlit_oauth.authorize_button/index.html"
+REDIRECT_URI = "https://communication-assistant-arletteruiz.streamlit.app/component/streamlit_oauth.authorize_button/"
 SCOPES        = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send"
 
 # ---------------------------------------------------------------------------
