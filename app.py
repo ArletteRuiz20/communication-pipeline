@@ -29,11 +29,7 @@ CLIENT_ID     = _web["client_id"]
 CLIENT_SECRET = _web["client_secret"]
 AUTH_URI      = _web["auth_uri"]
 TOKEN_URI     = _web["token_uri"]
-REDIRECT_URI = (
-    "https://communication-assistant-arletteruiz.streamlit.app/component/streamlit_oauth.authorize_button/index.html"
-    if os.environ.get("CREDENTIALS_JSON")  # only exists on cloud
-    else "http://localhost:8501/component/streamlit_oauth.authorize_button/index.html"
-)
+REDIRECT_URI = REDIRECT_URI = "https://communication-assistant-arletteruiz.streamlit.app/component/streamlit_oauth.authorize_button/index.html"
 SCOPES        = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send"
 
 # ---------------------------------------------------------------------------
