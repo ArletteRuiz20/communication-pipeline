@@ -68,8 +68,8 @@ ADK agent pipeline
     ↓
 Streamlit UI — displays result + audio player
 ```
-
----
+## Architecture
+![System Architecture](system_design_flow.svg)
 
 ## Running locally
 
