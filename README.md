@@ -73,6 +73,16 @@ Streamlit UI — displays result + audio player
 
 ## Running locally
 
+## Live AI Agent 
+[Try the App] (https://communication-assistant-arletteruiz.streamlit.app/)
+
+## Demo Video
+[Watch on Youtube] (https://youtu.be/-LQaQiHXwjU)
+
+## Presentation Slides
+[View Slides] (https://canva.link/nbqmhba6fboplul)
+
+
 ```bash
 # Clone the repo
 git clone https://github.com/YOUR_USERNAME/communication-pipeline.git
